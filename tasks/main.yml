@@ -1,0 +1,24 @@
+---
+# Check core configuration
+- assert:
+    that:
+      - vhost_name is defined
+      - vhost_root is defined
+      - vhost_index is defined
+
+# Check SSL config
+- assert:
+    that:
+      - vhost_ssl.certificate is defined
+      - vhost_ssl.private_key is defined
+  when:
+    - vhost_ssl != {} or vhost_redirect_http
+
+- name: Configure Nginx virtual host
+  template:
+    src: vhost.conf.j2
+    dest: /etc/nginx/conf.d/{{ vhost_name }}.conf
+    owner: root
+    group: root
+  notify:
+    - Reload Nginx

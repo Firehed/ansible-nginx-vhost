@@ -1,0 +1,30 @@
+---
+# Required values
+# vhost_name
+# vhost_root
+# vhost_index
+
+vhost_alt_names: ""
+vhost_fastcgi_params: {}
+vhost_fastcgi_pass: unix:/var/run/php-fpm.sock
+
+vhost_redirect_http: no
+vhost_process_http: yes
+
+# SSL defaults to off (because, ew, certificate management); to configure it,
+# provide a dictionary as follows:
+# vhost_ssl:
+#   certificate: /path/to/pubkey.pem
+#   private_key: /path/to/privatekey.pem
+#   dhparam: /path/to/dhparam.pem (optional)
+#   hsts: HSTS header lifetime in seconds (optional, recommended >=15768000)
+#
+# Other security settings may come in a future version, including
+#   HPKP (Public-Key-Pins)
+#   Clickjacking (X-Frame-Options)
+#   XSS (X-XSS-Protection)
+#   MIME-types (X-Content-Type-Options)
+#   CSP (Content-Security-Policy)
+#   OCSP Stapling
+#
+vhost_ssl: {}

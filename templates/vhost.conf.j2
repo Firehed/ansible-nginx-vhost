@@ -1,0 +1,83 @@
+# {{ ansible_managed }}
+
+{% if vhost_redirect_http %}
+server {
+    # Redirect all requests to HTTPS (HSTS *strongly* recommended)
+    listen *:80;
+    server_name {{ vhost_name }} {{ vhost_alt_names }};
+    return 301 https://$host$request_uri;
+}
+{% elif vhost_process_http %}
+server {
+    listen *:80;
+    server_name     {{ vhost_name }} {{ vhost_alt_names }};
+    root            {{ vhost_root }};
+    index           {{ vhost_index }};
+    access_log      /var/log/nginx/{{ vhost_name }}-access.log;
+    error_log       /var/log/nginx/{{ vhost_name }}-error.log;
+
+    location / {
+        try_files $uri $uri/ {{ vhost_index }};
+    }
+
+    # PHP Handling
+    location ~* \.php$ {
+        include /etc/nginx/fastcgi_params;
+        fastcgi_pass  {{ vhost_fastcgi_pass }};
+        fastcgi_index {{ vhost_index }};
+        fastcgi_param SCRIPT_FILENAME $realpath_root/$fastcgi_script_name;
+        {% for param, value in vhost_fastcgi_params.items()-%}
+        fastcgi_param {{ param }} {{ value }};
+        {% endfor %}
+
+    }
+}
+{% endif %}
+
+{% if vhost_ssl %}
+server {
+    listen *:443 ssl;
+    server_name     {{ vhost_name }} {{ vhost_alt_names }};
+    root            {{ vhost_root }};
+    index           {{ vhost_index }};
+    access_log      /var/log/nginx/{{ vhost_name }}-access.log;
+    error_log       /var/log/nginx/{{ vhost_name }}-error.log;
+
+    # From Mozilla SSL config generator
+    ssl_certificate {{ vhost_ssl.certificate }};
+    ssl_certificate_key {{ vhost_ssl.private_key }};
+    ssl_session_timeout 1d;
+    ssl_session_cache shared:SSL:50m;
+
+    {% if vhost_ssl.dhparam is defined-%}
+    # Diffie-Hellman Params
+    ssl_dhparam {{ vhost_ssl.dhparam }};
+    {% endif %}
+
+    # Mozilla "modern" config
+    ssl_protocols TLSv1.1 TLSv1.2;
+    ssl_ciphers 'ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-DSS-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:DHE-RSA-AES256-SHA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!3DES:!MD5:!PSK';
+    ssl_prefer_server_ciphers on;
+
+    {% if vhost_ssl.hsts is defined and vhost_ssl.hsts > 0 -%}
+    # HSTS
+    add_header Strict-Transport-Security max-age={{ vhost_ssl.hsts }};
+    {% endif-%}
+
+    location / {
+        try_files $uri $uri/ {{ vhost_index }};
+    }
+    # PHP Handling
+    location ~* \.php$ {
+        include /etc/nginx/fastcgi_params;
+        fastcgi_pass  {{ vhost_fastcgi_pass }};
+        fastcgi_index {{ vhost_index }};
+        fastcgi_param HTTPS on;
+        fastcgi_param SCRIPT_FILENAME $realpath_root/$fastcgi_script_name;
+        {% for param, value in vhost_fastcgi_params.items()-%}
+        fastcgi_param {{ param }} {{ value }};
+        {% endfor %}
+
+    }
+}
+{% endif %}
